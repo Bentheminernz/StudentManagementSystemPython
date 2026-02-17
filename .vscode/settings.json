@@ -1,0 +1,15 @@
+{
+"cSpell.language": "en-GB",
+  "cSpell.enabledFileTypes": {
+    "markdown": true,
+    "python": true
+  },
+  "cSpell.languageSettings": [
+    {
+      "languageId": "python",
+      "includeRegExpList": [
+        "/\"[^\"]*\"/g"
+      ]
+    }
+  ],
+}
