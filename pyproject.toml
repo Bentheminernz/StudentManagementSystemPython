@@ -9,3 +9,8 @@ dependencies = [
     "pre-commit>=4.5.1",
     "pytest>=9.0.2",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["Tests"]
+python_files = ["*Tests.py", "test_*.py"]
+pythonpath = ["."]
