@@ -1,15 +1,21 @@
 import random
 import sqlite3
-from Utils.Dataclasses import Admin, Student, Teacher, Class, Assignment, Grade
+from Utils.Dataclasses import Student
+
 
 class Database:
-    def __init__(self):
-        self.db_path = "app_data.db"
+    def __init__(self, db_path: str = "app_data.db", seed_defaults: bool = True):
+        self.db_path = db_path
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON;")
         self._create_tables()
-        self._seed_defaults()
+        if seed_defaults:
+            self._seed_defaults()
+
+    def close(self) -> None:
+        if self.conn:
+            self.conn.close()
 
     def _create_tables(self):
         """Creates the necessary tables for the application if they do not already exist."""
@@ -138,7 +144,10 @@ class Database:
             ).fetchall()
             teacher_ids = {row["first_name"]: row["id"] for row in teacher_rows}
             default_classes = [
-                ("Math 101", teacher_ids.get("John") or next(iter(teacher_ids.values()), None)),
+                (
+                    "Math 101",
+                    teacher_ids.get("John") or next(iter(teacher_ids.values()), None),
+                ),
                 ("Science 101", teacher_ids.get("Emily")),
             ]
             for name, teacher_id in default_classes:
@@ -161,9 +170,7 @@ class Database:
                 )
 
         if self._table_is_empty("assignment"):
-            class_rows = self.conn.execute(
-                "SELECT id, name FROM class;"
-            ).fetchall()
+            class_rows = self.conn.execute("SELECT id, name FROM class;").fetchall()
             class_ids = {row["name"]: row["id"] for row in class_rows}
             assignments = [
                 (
@@ -214,14 +221,16 @@ class Database:
         """Retrieves all students from the database."""
         cursor = self.conn.execute("SELECT * FROM student;")
         return [Student.from_row(row) for row in cursor.fetchall()]
-    
+
     def get_student_by_id(self, student_id: int) -> Student | None:
         """Retrieves a student by their ID."""
         cursor = self.conn.execute("SELECT * FROM student WHERE id = ?;", (student_id,))
         row = cursor.fetchone()
         return Student.from_row(row) if row else None
-    
-    def add_student(self, first_name: str, last_name: str, email: str, date_of_birth: str) -> Student | None:
+
+    def add_student(
+        self, first_name: str, last_name: str, email: str, date_of_birth: str
+    ) -> Student | None:
         """Adds a new student to the database."""
         try:
             cursor = self.conn.execute(
@@ -235,8 +244,15 @@ class Database:
             return self.get_student_by_id(cursor.lastrowid)
         except sqlite3.IntegrityError:
             return None
-        
-    def update_student(self, student_id: int, first_name: str, last_name: str, email: str, date_of_birth: str) -> Student | None:
+
+    def update_student(
+        self,
+        student_id: int,
+        first_name: str,
+        last_name: str,
+        email: str,
+        date_of_birth: str,
+    ) -> tuple[bool, Student | None]:
         """Updates an existing student's information."""
         try:
             self.conn.execute(
@@ -248,10 +264,10 @@ class Database:
                 (first_name, last_name, email, date_of_birth, student_id),
             )
             self.conn.commit()
-            return self.get_student_by_id(student_id)
+            return True, self.get_student_by_id(student_id)
         except sqlite3.IntegrityError:
-            return None
-        
+            return False, None
+
     def delete_student(self, student_id: int) -> bool:
         """Deletes a student from the database."""
         self.conn.execute("DELETE FROM student WHERE id = ?;", (student_id,))
