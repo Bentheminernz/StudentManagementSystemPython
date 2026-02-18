@@ -2,6 +2,7 @@ from typing import Self
 from dataclasses import dataclass
 import sqlite3
 
+
 @dataclass
 class Admin:
     id: int
@@ -26,6 +27,7 @@ class Admin:
             updated_at=row["updated_at"],
         )
 
+
 @dataclass
 class Student:
     id: int
@@ -35,6 +37,9 @@ class Student:
     date_of_birth: str
     created_at: str
     updated_at: str
+
+    def name(self) -> str:
+        return f"{self.first_name} {self.last_name}"
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Self:
@@ -47,6 +52,7 @@ class Student:
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
+
 
 @dataclass
 class Teacher:
@@ -70,6 +76,7 @@ class Teacher:
             updated_at=row["updated_at"],
         )
 
+
 @dataclass
 class Class:
     id: int
@@ -87,6 +94,7 @@ class Class:
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
+
 
 @dataclass
 class Assignment:
@@ -109,6 +117,7 @@ class Assignment:
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
+
 
 @dataclass
 class Grade:

@@ -31,6 +31,9 @@ class App(ctk.CTk):
         ctk.CTkButton(
             self.sidebar, text="Students", command=lambda: self.show_frame(Students)
         ).pack(pady=10, padx=10)
+        ctk.CTkButton(self.sidebar, text="Exit", command=self.destroy).pack(
+            pady=10, padx=10, side="bottom"
+        )
 
         self.container = ctk.CTkFrame(self)
         self.container.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
