@@ -1,6 +1,6 @@
 import random
 import sqlite3
-from Utils.Dataclasses import Student
+from Utils.Dataclasses import Student, Class
 
 
 class Database:
@@ -273,3 +273,54 @@ class Database:
         self.conn.execute("DELETE FROM student WHERE id = ?;", (student_id,))
         self.conn.commit()
         return self.get_student_by_id(student_id) is None
+
+    # class methods
+    def get_all_classes(self) -> list[Class]:
+        """Retrieves all classes from the database."""
+        cursor = self.conn.execute("SELECT * FROM class;")
+        return [Class.from_row(row) for row in cursor.fetchall()]
+
+    def get_class_by_id(self, class_id: int) -> Class | None:
+        """Retrieves a class by its ID."""
+        cursor = self.conn.execute("SELECT * FROM class WHERE id = ?;", (class_id,))
+        row = cursor.fetchone()
+        return Class.from_row(row) if row else None
+
+    def add_class(self, name: str, teacher_id: int) -> Class | None:
+        """Adds a new class to the database."""
+        try:
+            cursor = self.conn.execute(
+                """
+                INSERT INTO class (name, teacher_id)
+                VALUES (?, ?);
+                """,
+                (name, teacher_id),
+            )
+            self.conn.commit()
+            return self.get_class_by_id(cursor.lastrowid)
+        except sqlite3.IntegrityError:
+            return None
+
+    def update_class(
+        self, class_id: int, name: str, teacher_id: int
+    ) -> tuple[bool, Class | None]:
+        """Updates an existing class's information."""
+        try:
+            self.conn.execute(
+                """
+                UPDATE class
+                SET name = ?, teacher_id = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?;
+                """,
+                (name, teacher_id, class_id),
+            )
+            self.conn.commit()
+            return True, self.get_class_by_id(class_id)
+        except sqlite3.IntegrityError:
+            return False, None
+
+    def delete_class(self, class_id: int) -> bool:
+        """Deletes a class from the database."""
+        self.conn.execute("DELETE FROM class WHERE id = ?;", (class_id,))
+        self.conn.commit()
+        return self.get_class_by_id(class_id) is None
