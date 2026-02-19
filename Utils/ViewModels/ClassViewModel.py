@@ -12,7 +12,7 @@ class ClassViewModel:
     def load_classes(self):
         self.classes = self.db.get_all_classes()
 
-    def get_class_by_id(self, class_id: int) -> Class:
+    def get_class_by_id(self, class_id: int) -> Class | None:
         for cls in self.classes:
             if cls.id == class_id:
                 return cls
