@@ -1,7 +1,10 @@
 from UI.Home import Home
 from UI.Students import Students
+from UI.Classes import Classes
 from Utils.Database import Database
+from Utils.ViewModels.TeacherViewModel import TeacherViewModel
 from Utils.ViewModels.StudentViewModel import StudentViewModel
+from Utils.ViewModels.ClassViewModel import ClassViewModel
 import customtkinter as ctk
 
 
@@ -10,6 +13,8 @@ class App(ctk.CTk):
         super().__init__()
         self.db = Database()
         self.student_vm = StudentViewModel(self.db)
+        self.class_vm = ClassViewModel(self.db)
+        self.teacher_vm = TeacherViewModel(self.db)
 
         self.title("Student Management System - KHS")
         self.geometry("800x500")
@@ -31,6 +36,9 @@ class App(ctk.CTk):
         ctk.CTkButton(
             self.sidebar, text="Students", command=lambda: self.show_frame(Students)
         ).pack(pady=10, padx=10)
+        ctk.CTkButton(
+            self.sidebar, text="Classes", command=lambda: self.show_frame(Classes)
+        ).pack(pady=10, padx=10)
         ctk.CTkButton(self.sidebar, text="Exit", command=self.destroy).pack(
             pady=10, padx=10, side="bottom"
         )
@@ -41,7 +49,7 @@ class App(ctk.CTk):
         self.container.grid_columnconfigure(0, weight=1)
 
         self.frames = {}
-        for Page in (Home, Students):
+        for Page in (Home, Students, Classes):
             frame = Page(self.container, self)
             self.frames[Page] = frame
             frame.grid(row=0, column=0, sticky="nsew")
