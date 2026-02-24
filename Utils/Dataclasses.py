@@ -76,6 +76,9 @@ class Teacher:
             updated_at=row["updated_at"],
         )
 
+    def name(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+
 
 @dataclass
 class Class:

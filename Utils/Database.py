@@ -1,6 +1,6 @@
 import random
 import sqlite3
-from Utils.Dataclasses import Student
+from Utils.Dataclasses import Student, Class, Teacher
 
 
 class Database:
@@ -273,3 +273,137 @@ class Database:
         self.conn.execute("DELETE FROM student WHERE id = ?;", (student_id,))
         self.conn.commit()
         return self.get_student_by_id(student_id) is None
+
+    # class methods
+    def get_all_classes(self) -> list[Class]:
+        """Retrieves all classes from the database."""
+        cursor = self.conn.execute("SELECT * FROM class;")
+        return [Class.from_row(row) for row in cursor.fetchall()]
+
+    def get_class_by_id(self, class_id: int) -> Class | None:
+        """Retrieves a class by its ID."""
+        cursor = self.conn.execute("SELECT * FROM class WHERE id = ?;", (class_id,))
+        row = cursor.fetchone()
+        return Class.from_row(row) if row else None
+
+    def add_class(self, name: str, teacher_id: int) -> Class | None:
+        """Adds a new class to the database."""
+        try:
+            cursor = self.conn.execute(
+                """
+                INSERT INTO class (name, teacher_id)
+                VALUES (?, ?);
+                """,
+                (name, teacher_id),
+            )
+            self.conn.commit()
+            return self.get_class_by_id(cursor.lastrowid)
+        except sqlite3.IntegrityError:
+            print(f"Failed to add class '{name}' with teacher ID {teacher_id}.")
+            return None
+
+    def update_class(
+        self, class_id: int, name: str, teacher_id: int
+    ) -> tuple[bool, Class | None]:
+        """Updates an existing class's information."""
+        try:
+            self.conn.execute(
+                """
+                UPDATE class
+                SET name = ?, teacher_id = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?;
+                """,
+                (name, teacher_id, class_id),
+            )
+            self.conn.commit()
+            return True, self.get_class_by_id(class_id)
+        except sqlite3.IntegrityError:
+            return False, None
+
+    def delete_class(self, class_id: int) -> bool:
+        """Deletes a class from the database."""
+        self.conn.execute("DELETE FROM class WHERE id = ?;", (class_id,))
+        self.conn.commit()
+        return self.get_class_by_id(class_id) is None
+
+    def get_students_by_class_id(self, class_id: int) -> list[Student]:
+        """Retrieves all students enrolled in a given class."""
+        cursor = self.conn.execute(
+            """
+            SELECT s.* FROM student s
+            JOIN class_student cs ON s.id = cs.student_id
+            WHERE cs.class_id = ?;
+            """,
+            (class_id,),
+        )
+        return [Student.from_row(row) for row in cursor.fetchall()]
+
+    def set_students_for_class(self, class_id: int, student_ids: list[int]) -> bool:
+        """Replaces all enrolled students for a class with the provided list."""
+        try:
+            self.conn.execute(
+                "DELETE FROM class_student WHERE class_id = ?;", (class_id,)
+            )
+            if student_ids:
+                self.conn.executemany(
+                    "INSERT OR IGNORE INTO class_student (class_id, student_id) VALUES (?, ?);",
+                    [(class_id, sid) for sid in student_ids],
+                )
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Failed to set students for class {class_id}: {e}")
+            return False
+
+    # Teacher Method
+    def get_all_teachers(self) -> list[Teacher]:
+        """Retrieves all teachers from the database."""
+        cursor = self.conn.execute("SELECT * FROM teacher;")
+        return [Teacher.from_row(row) for row in cursor.fetchall()]
+
+    def get_teacher_by_id(self, teacher_id: int) -> Teacher | None:
+        """Retrieves a teacher by their ID."""
+        cursor = self.conn.execute("SELECT * FROM teacher WHERE id = ?;", (teacher_id,))
+        row = cursor.fetchone()
+        return Teacher.from_row(row) if row else None
+
+    def add_teacher(
+        self, first_name: str, last_name: str, email: str
+    ) -> Teacher | None:
+        """Adds a new teacher to the database."""
+        try:
+            cursor = self.conn.execute(
+                """
+                INSERT INTO teacher (first_name, last_name, email)
+                VALUES (?, ?, ?);
+                """,
+                (first_name, last_name, email),
+            )
+            self.conn.commit()
+            return self.get_teacher_by_id(cursor.lastrowid)
+        except sqlite3.IntegrityError:
+            return None
+
+    def update_teacher(
+        self, teacher_id: int, first_name: str, last_name: str, email: str
+    ) -> tuple[bool, Teacher | None]:
+        """Updates an existing teacher's information."""
+        try:
+            self.conn.execute(
+                """
+                UPDATE teacher
+                SET first_name = ?, last_name = ?, email = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?;
+                """,
+                (first_name, last_name, email, teacher_id),
+            )
+            self.conn.commit()
+            return True, self.get_teacher_by_id(teacher_id)
+        except sqlite3.IntegrityError:
+            return False, None
+
+    def delete_teacher(self, teacher_id: int) -> bool:
+        """Deletes a teacher from the database."""
+        self.conn.execute("DELETE FROM teacher WHERE id = ?;", (teacher_id,))
+        self.conn.commit()
+        return self.get_teacher_by_id(teacher_id) is None
