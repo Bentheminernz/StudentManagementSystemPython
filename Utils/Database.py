@@ -338,6 +338,23 @@ class Database:
         )
         return [Student.from_row(row) for row in cursor.fetchall()]
 
+    def set_students_for_class(self, class_id: int, student_ids: list[int]) -> bool:
+        """Replaces all enrolled students for a class with the provided list."""
+        try:
+            self.conn.execute(
+                "DELETE FROM class_student WHERE class_id = ?;", (class_id,)
+            )
+            if student_ids:
+                self.conn.executemany(
+                    "INSERT OR IGNORE INTO class_student (class_id, student_id) VALUES (?, ?);",
+                    [(class_id, sid) for sid in student_ids],
+                )
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Failed to set students for class {class_id}: {e}")
+            return False
+
     # Teacher Method
     def get_all_teachers(self) -> list[Teacher]:
         """Retrieves all teachers from the database."""
