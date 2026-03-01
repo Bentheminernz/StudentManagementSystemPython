@@ -141,15 +141,19 @@ class Classes(ctk.CTkFrame):
         self._add_selected_frame.pack(fill="both", expand=True, padx=5, pady=5)
 
         self.add_error_label = ctk.CTkLabel(frame, text="", text_color="red")
-        self.add_error_label.pack(pady=5)
+        self.add_error_label.pack(pady=(5, 0))
 
-        ctk.CTkButton(frame, text="Save", command=self._save_class).pack(pady=5)
+        btn_row = ctk.CTkFrame(frame, fg_color="transparent")
+        btn_row.pack(pady=(0, 5))
+        ctk.CTkButton(btn_row, text="Save", command=self._save_class).pack(
+            side="left", padx=5
+        )
         ctk.CTkButton(
-            frame,
+            btn_row,
             text="Back",
             fg_color="gray",
             command=lambda: self.show_frame("list"),
-        ).pack(pady=5)
+        ).pack(side="left", padx=5)
 
     # -------------------------------------------------- student picker helpers --
 
@@ -339,6 +343,21 @@ class Classes(ctk.CTkFrame):
         else:
             self.edit_teacher_combobox.set("")
 
+        self.edit_error_label = ctk.CTkLabel(frame, text="", text_color="red")
+        self.edit_error_label.pack(pady=(5, 0))
+
+        edit_btn_row = ctk.CTkFrame(frame, fg_color="transparent")
+        edit_btn_row.pack(pady=(0, 5))
+        ctk.CTkButton(edit_btn_row, text="Save", command=self._update_class).pack(
+            side="left", padx=5
+        )
+        ctk.CTkButton(
+            edit_btn_row,
+            text="Back",
+            fg_color="gray",
+            command=lambda: self.show_frame("list"),
+        ).pack(side="left", padx=5)
+
         # Dual-list student picker (pre-populate with enrolled students)
         enrolled = self.controller.db.get_students_by_class_id(cls.id)
         enrolled_ids = {s.id for s in enrolled}
@@ -376,16 +395,6 @@ class Classes(ctk.CTkFrame):
         self._edit_selected_frame.pack(fill="both", expand=True, padx=5, pady=5)
 
         self._edit_render()
-
-        self.edit_error_label = ctk.CTkLabel(frame, text="", text_color="red")
-        self.edit_error_label.pack(pady=5)
-        ctk.CTkButton(frame, text="Save", command=self._update_class).pack(pady=5)
-        ctk.CTkButton(
-            frame,
-            text="Back",
-            fg_color="gray",
-            command=lambda: self.show_frame("list"),
-        ).pack(pady=5)
 
     # ------------------------------------------ edit-frame picker state/actions --
 
