@@ -286,7 +286,8 @@ class Classes(ctk.CTkFrame):
                 teacher_names.index(teacher_id)
             ].id
         else:
-            print("No teacher selected, class will be created without a teacher.")
+            print("No teacher selected, setting teacher_id to None")
+            teacher_id = None
 
         if not name:
             self.add_error_label.configure(text="Class name cannot be empty.")
@@ -332,14 +333,9 @@ class Classes(ctk.CTkFrame):
             state="readonly",
         )
         self.edit_teacher_combobox.pack(pady=5, padx=20, fill="x")
-        if cls.teacher_id:
-            teacher_names = [t.name() for t in self.controller.teacher_vm.teachers]
-            teacher_id = self.controller.teacher_vm.get_teacher_by_id(cls.teacher_id).id
-            self.edit_teacher_combobox.set(
-                teacher_names[teacher_id - 1]
-                if teacher_id - 1 < len(teacher_names)
-                else ""
-            )
+        teacher = self.controller.teacher_vm.get_teacher_by_id(cls.teacher_id)
+        if teacher is not None:
+            self.edit_teacher_combobox.set(teacher.name())
         else:
             self.edit_teacher_combobox.set("")
 
@@ -467,7 +463,7 @@ class Classes(ctk.CTkFrame):
                 teacher_names.index(teacher_id)
             ].id
         else:
-            print("No teacher selected, class will be updated without a teacher.")
+            teacher_id = None
         class_id = self.class_listbox.item(selected[0])["values"][0]
         name = self.edit_name_entry.get().strip()
         if not name:

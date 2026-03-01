@@ -286,7 +286,7 @@ class Database:
         row = cursor.fetchone()
         return Class.from_row(row) if row else None
 
-    def add_class(self, name: str, teacher_id: int) -> Class | None:
+    def add_class(self, name: str, teacher_id: int | None) -> Class | None:
         """Adds a new class to the database."""
         try:
             cursor = self.conn.execute(
@@ -303,7 +303,7 @@ class Database:
             return None
 
     def update_class(
-        self, class_id: int, name: str, teacher_id: int
+        self, class_id: int, name: str, teacher_id: int | None
     ) -> tuple[bool, Class | None]:
         """Updates an existing class's information."""
         try:
@@ -353,6 +353,7 @@ class Database:
             return True
         except Exception as e:
             print(f"Failed to set students for class {class_id}: {e}")
+            self.conn.rollback()
             return False
 
     # Teacher Method
@@ -382,6 +383,7 @@ class Database:
             self.conn.commit()
             return self.get_teacher_by_id(cursor.lastrowid)
         except sqlite3.IntegrityError:
+            self.conn.rollback()
             return None
 
     def update_teacher(
@@ -400,6 +402,7 @@ class Database:
             self.conn.commit()
             return True, self.get_teacher_by_id(teacher_id)
         except sqlite3.IntegrityError:
+            self.conn.rollback()
             return False, None
 
     def delete_teacher(self, teacher_id: int) -> bool:
