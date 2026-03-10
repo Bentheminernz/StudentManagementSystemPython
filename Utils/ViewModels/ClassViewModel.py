@@ -2,6 +2,11 @@ from Utils.Database import Database
 from Utils.Dataclasses import Class
 from typing import List
 
+"""
+The ClassViewModel is responsible for managing the state and operations related to classes in the application.
+I'm using view models as it takes the logic away from the UI, and it can be used between multiple different pages if needed.
+"""
+
 
 class ClassViewModel:
     def __init__(self, db: Database):

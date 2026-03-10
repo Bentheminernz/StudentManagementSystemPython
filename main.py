@@ -7,18 +7,24 @@ from Utils.ViewModels.StudentViewModel import StudentViewModel
 from Utils.ViewModels.ClassViewModel import ClassViewModel
 import customtkinter as ctk
 
+"""The apps entry point. Initializes the database, view models, and main application window."""
+
 
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.db = Database()
+        self.db = Database()  # Create a new database instance
+
+        # Create ViewModels from the database instance
         self.student_vm = StudentViewModel(self.db)
         self.class_vm = ClassViewModel(self.db)
         self.teacher_vm = TeacherViewModel(self.db)
 
+        # Initialize the main application window
         self.title("Student Management System - KHS")
-        self.geometry("800x500")
+        self.geometry("1000x600")
 
+        # Configure grid layout
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
@@ -27,6 +33,7 @@ class App(ctk.CTk):
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         self.sidebar.grid_propagate(False)
 
+        # Creates the sidebar buttons
         ctk.CTkLabel(
             self.sidebar, text="KHS DB", font=ctk.CTkFont(size=20, weight="bold")
         ).pack(pady=20)
@@ -43,11 +50,13 @@ class App(ctk.CTk):
             pady=10, padx=10, side="bottom"
         )
 
+        # Makes the container for main content area
         self.container = ctk.CTkFrame(self)
         self.container.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
         self.container.grid_rowconfigure(0, weight=1)
         self.container.grid_columnconfigure(0, weight=1)
 
+        # Makes each frame, and adds it to the container, and stores it in a dictionary for easy access
         self.frames = {}
         for Page in (Home, Students, Classes):
             frame = Page(self.container, self)
@@ -56,10 +65,15 @@ class App(ctk.CTk):
 
         self.show_frame(Home)
 
+    # Helper function to show a frame, and call its on_show method if it has one
     def show_frame(self, page_class):
-        self.frames[page_class].tkraise()
+        frame = self.frames[page_class]
+        if hasattr(frame, "on_show"):
+            frame.on_show()
+        frame.tkraise()
 
 
 if __name__ == "__main__":
+    # Initialize and run the application
     app = App()
     app.mainloop()
