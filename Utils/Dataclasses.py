@@ -1,6 +1,20 @@
 from typing import Self
+from enum import Enum
 from dataclasses import dataclass
 import sqlite3
+
+"""
+In this file, we define the dataclasses for our application:
+- Admin
+- Student
+- Teacher
+- Class
+- Grade
+
+Each dataclass has a `from_row` class method that takes a sqlite3.Row and then turns it into an instance of the dataclass.
+
+It also has the GradeEnum, which is an enum for the possible grades a student can receive in a class. Means we can only set grades to A, B, C, D, or F.
+"""
 
 
 @dataclass
@@ -99,35 +113,20 @@ class Class:
         )
 
 
-@dataclass
-class Assignment:
-    id: int
-    title: str
-    information: str
-    due_date: str
-    class_id: int
-    created_at: str
-    updated_at: str
-
-    @classmethod
-    def from_row(cls, row: sqlite3.Row) -> Self:
-        return cls(
-            id=row["id"],
-            title=row["title"],
-            information=row["information"],
-            due_date=row["due_date"],
-            class_id=row["class_id"],
-            created_at=row["created_at"],
-            updated_at=row["updated_at"],
-        )
+class GradeEnum(str, Enum):
+    A = "A"
+    B = "B"
+    C = "C"
+    D = "D"
+    F = "F"
 
 
 @dataclass
 class Grade:
     id: int
     student_id: int
-    assignment_id: int
-    grade: float
+    class_id: int
+    grade: GradeEnum
     created_at: str
     updated_at: str
 
@@ -136,8 +135,8 @@ class Grade:
         return cls(
             id=row["id"],
             student_id=row["student_id"],
-            assignment_id=row["assignment_id"],
-            grade=row["grade"],
+            class_id=row["class_id"],
+            grade=GradeEnum(row["grade"]),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )

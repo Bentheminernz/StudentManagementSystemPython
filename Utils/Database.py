@@ -1,10 +1,18 @@
 import random
 import sqlite3
-from Utils.Dataclasses import Student, Class, Teacher
+from Utils.Dataclasses import Student, Class, Teacher, Grade, GradeEnum
+
+
+"""
+This file contains the Database class, which is the manager for all interactions with the SQLite database.
+It handles all the CRUD (Create, Read, Update, Delete) operations for students, classes, teachers, and grades.
+It also has the logic for initializing the database, creating tables, and seeding default data if the tables are empty (and the seed_defaults flag is set to True).
+"""
 
 
 class Database:
     def __init__(self, db_path: str = "app_data.db", seed_defaults: bool = True):
+        """Initializes the instance, makes a db connection, creates tables if they don't exist and seeds default data if the tables are empty and seed_defaults is True."""
         self.db_path = db_path
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
@@ -14,12 +22,14 @@ class Database:
             self._seed_defaults()
 
     def close(self) -> None:
+        """simple method to close the database connection when we're done with it."""
         if self.conn:
             self.conn.close()
 
     def _create_tables(self):
         """Creates the necessary tables for the application if they do not already exist."""
         self.conn.executescript("""
+            -- This is SQL code, it creates the tables for our database with the appropriate columns and constraints.
             CREATE TABLE IF NOT EXISTS admin (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 first_name TEXT NOT NULL,
@@ -60,27 +70,16 @@ class Database:
                 FOREIGN KEY (teacher_id) REFERENCES teacher(id) ON DELETE SET NULL
             );
 
-            CREATE TABLE IF NOT EXISTS assignment (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                information TEXT NOT NULL,
-                due_date DATE NOT NULL,
-                class_id INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (class_id) REFERENCES class(id) ON DELETE SET NULL
-            );
-
             CREATE TABLE IF NOT EXISTS grade (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 student_id INTEGER NOT NULL,
-                assignment_id INTEGER NOT NULL,
-                grade REAL NOT NULL,
+                class_id INTEGER NOT NULL,
+                grade TEXT NOT NULL CHECK (grade IN ('A', 'B', 'C', 'D', 'F')),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (student_id) REFERENCES student(id) ON DELETE CASCADE,
-                FOREIGN KEY (assignment_id) REFERENCES assignment(id) ON DELETE CASCADE,
-                UNIQUE (student_id, assignment_id)
+                FOREIGN KEY (class_id) REFERENCES class(id) ON DELETE CASCADE,
+                UNIQUE (student_id, class_id)
             );
 
             CREATE TABLE IF NOT EXISTS class_student (
@@ -91,7 +90,7 @@ class Database:
                 FOREIGN KEY (student_id) REFERENCES student(id) ON DELETE CASCADE
             );
         """)
-        self.conn.commit()
+        self.conn.commit()  # Saves the transaction to the db file
 
     def _table_is_empty(self, table_name: str) -> bool:
         """Checks if a given table is empty."""
@@ -116,10 +115,10 @@ class Database:
                 ("Bob", "Johnson", "bobjohnson@example.com"),
                 ("Charlie", "Brown", "charliebrown@example.com"),
             ]
-            self.conn.executemany(
+            self.conn.executemany(  # executemany is like a for loop for execute, it runs the same SQL command with different parameters for each tuple in the list
                 """
                 INSERT INTO student (first_name, last_name, email, date_of_birth)
-                VALUES (?, ?, ?, date('now'));
+                VALUES (?, ?, ?, date('now')); -- the question marks are placeholders for the parameters in the tuple
                 """,
                 default_students,
             )
@@ -169,52 +168,33 @@ class Database:
                     class_student_pairs,
                 )
 
-        if self._table_is_empty("assignment"):
-            class_rows = self.conn.execute("SELECT id, name FROM class;").fetchall()
-            class_ids = {row["name"]: row["id"] for row in class_rows}
-            assignments = [
-                (
-                    "Math Homework 1",
-                    "Complete exercises 1-10 on page 50",
-                    "date('now','+7 days')",
-                    class_ids.get("Math 101"),
-                ),
-                (
-                    "Science Project",
-                    "Build a model of the solar system",
-                    "date('now','+14 days')",
-                    class_ids.get("Science 101"),
-                ),
-            ]
-            for title, info, due_date_expr, class_id in assignments:
-                self.conn.execute(
-                    f"INSERT INTO assignment (title, information, due_date, class_id) VALUES (?, ?, {due_date_expr}, ?);",
-                    (title, info, class_id),
-                )
-
         if self._table_is_empty("grade"):
             student_rows = self.conn.execute("SELECT id FROM student;").fetchall()
-            assignment_rows = self.conn.execute("SELECT id FROM assignment;").fetchall()
+            class_rows = self.conn.execute("SELECT id FROM class;").fetchall()
             grade_rows = []
             for student_row in student_rows:
-                for assignment_row in assignment_rows:
+                for class_row in class_rows:
                     grade_rows.append(
                         (
                             student_row["id"],
-                            assignment_row["id"],
-                            round(random.uniform(60, 100), 2),
+                            class_row["id"],
+                            random.choice(list(GradeEnum)).value,
                         )
                     )
             if grade_rows:
                 self.conn.executemany(
                     """
-                    INSERT OR IGNORE INTO grade (student_id, assignment_id, grade)
+                    INSERT OR IGNORE INTO grade (student_id, class_id, grade)
                     VALUES (?, ?, ?);
                     """,
                     grade_rows,
                 )
 
         self.conn.commit()
+
+    """
+    Below is the basic CRUD operations for students, classes, teachers, and grades, as well as some helper methods.
+    """
 
     # Student Methods
     def get_all_students(self) -> list[Student]:
@@ -338,6 +318,19 @@ class Database:
         )
         return [Student.from_row(row) for row in cursor.fetchall()]
 
+    def get_classes_by_student_id(self, student_id: int) -> list[Class]:
+        """Retrieves all classes a student is enrolled in."""
+        cursor = self.conn.execute(
+            """
+            SELECT c.* FROM class c
+            JOIN class_student cs ON c.id = cs.class_id
+            WHERE cs.student_id = ?
+            ORDER BY c.name;
+            """,
+            (student_id,),
+        )
+        return [Class.from_row(row) for row in cursor.fetchall()]
+
     def set_students_for_class(self, class_id: int, student_ids: list[int]) -> bool:
         """Replaces all enrolled students for a class with the provided list."""
         try:
@@ -355,6 +348,72 @@ class Database:
             print(f"Failed to set students for class {class_id}: {e}")
             self.conn.rollback()
             return False
+
+    # Grade Methods
+    def get_all_grades(self) -> list[Grade]:
+        """Retrieves all class-level grades from the database."""
+        cursor = self.conn.execute("SELECT * FROM grade;")
+        return [Grade.from_row(row) for row in cursor.fetchall()]
+
+    def get_grade_for_student_in_class(
+        self, student_id: int, class_id: int
+    ) -> Grade | None:
+        """Retrieves the grade for a specific student in a specific class."""
+        cursor = self.conn.execute(
+            "SELECT * FROM grade WHERE student_id = ? AND class_id = ?;",
+            (student_id, class_id),
+        )
+        row = cursor.fetchone()
+        return Grade.from_row(row) if row else None
+
+    def get_grades_for_student(self, student_id: int) -> list[Grade]:
+        """Retrieves all class grades for a specific student."""
+        cursor = self.conn.execute(
+            "SELECT * FROM grade WHERE student_id = ? ORDER BY class_id;",
+            (student_id,),
+        )
+        return [Grade.from_row(row) for row in cursor.fetchall()]
+
+    def set_grade_for_student_in_class(
+        self, student_id: int, class_id: int, grade_value: GradeEnum | str
+    ) -> tuple[bool, Grade | None]:
+        """Creates or updates a student's letter grade for a class."""
+        if isinstance(grade_value, GradeEnum):
+            normalized_grade = grade_value
+        elif isinstance(grade_value, str):
+            candidate = grade_value.strip().upper()
+            if not candidate:
+                return False, None
+            try:
+                normalized_grade = GradeEnum(candidate)
+            except ValueError:
+                return False, None
+        else:
+            return False, None
+
+        enrolled = self.conn.execute(
+            "SELECT 1 FROM class_student WHERE class_id = ? AND student_id = ?;",
+            (class_id, student_id),
+        ).fetchone()
+        if enrolled is None:
+            return False, None
+
+        try:
+            self.conn.execute(
+                """
+                INSERT INTO grade (student_id, class_id, grade)
+                VALUES (?, ?, ?)
+                ON CONFLICT(student_id, class_id) DO UPDATE SET
+                    grade = excluded.grade,
+                    updated_at = CURRENT_TIMESTAMP;
+                """,
+                (student_id, class_id, normalized_grade.value),
+            )
+            self.conn.commit()
+            return True, self.get_grade_for_student_in_class(student_id, class_id)
+        except sqlite3.IntegrityError:
+            self.conn.rollback()
+            return False, None
 
     # Teacher Method
     def get_all_teachers(self) -> list[Teacher]:
