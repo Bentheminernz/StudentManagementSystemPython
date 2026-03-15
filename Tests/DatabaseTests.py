@@ -2,7 +2,12 @@ from Utils.Database import Database
 from Utils.Dataclasses import GradeEnum
 
 
+"""These tests cover the core database operations for managing students, teachers, classes, and grades. They include both standard CRUD operations and edge cases to ensure robustness of the Database class.
+"""
+
+
 def test_database_initialization():
+    """Seeds defaults and verifies initial student records are created."""
     db = Database(db_path=":memory:", seed_defaults=True)
     students = db.get_all_students()
     assert len(students) == 3
@@ -13,6 +18,7 @@ def test_database_initialization():
 
 
 def test_add_student():
+    """Adds a student and verifies persisted values."""
     db = Database(db_path=":memory:", seed_defaults=False)
 
     student = db.add_student("John", "Doe", "john.doe@example.com", "2000-01-01")
@@ -25,6 +31,7 @@ def test_add_student():
 
 
 def test_get_student_by_id():
+    """Returns a student for a valid student ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     student = db.get_student_by_id(1)
     assert student is not None
@@ -33,6 +40,7 @@ def test_get_student_by_id():
 
 
 def test_update_student():
+    """Updates student fields and verifies the changes are persisted."""
     db = Database(db_path=":memory:", seed_defaults=True)
     student = db.update_student(
         1, "John", "Smith", "john.smith@example.com", "2000-01-01"
@@ -48,6 +56,7 @@ def test_update_student():
 
 
 def test_get_all_classes():
+    """Returns all seeded classes."""
     db = Database(db_path=":memory:", seed_defaults=True)
     classes = db.get_all_classes()
     assert len(classes) == 2
@@ -57,6 +66,7 @@ def test_get_all_classes():
 
 
 def test_get_class_by_id():
+    """Returns a class for a valid class ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     cls = db.get_class_by_id(1)
     assert cls is not None
@@ -66,6 +76,7 @@ def test_get_class_by_id():
 
 
 def test_add_class():
+    """Adds a class and verifies values."""
     db = Database(db_path=":memory:", seed_defaults=True)
     cls = db.add_class("History 101", 1)
     assert cls is not None
@@ -75,6 +86,7 @@ def test_add_class():
 
 
 def test_update_class():
+    """Updates class details and verifies the persisted result."""
     db = Database(db_path=":memory:", seed_defaults=True)
     success, cls = db.update_class(1, "Advanced Math 101", 2)
     assert success
@@ -86,6 +98,7 @@ def test_update_class():
 
 
 def test_delete_class():
+    """Deletes a class and confirms it is no longer retrievable."""
     db = Database(db_path=":memory:", seed_defaults=True)
     success = db.delete_class(1)
     assert success
@@ -96,6 +109,7 @@ def test_delete_class():
 
 # boundary/edge cases
 def test_get_all_students_empty_db():
+    """Returns an empty list when no students exist."""
     db = Database(db_path=":memory:", seed_defaults=False)
     students = db.get_all_students()
     assert students == []
@@ -103,6 +117,7 @@ def test_get_all_students_empty_db():
 
 
 def test_get_student_by_id_nonexistent():
+    """Returns None for a nonexistent student ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     student = db.get_student_by_id(9999)
     assert student is None
@@ -110,6 +125,7 @@ def test_get_student_by_id_nonexistent():
 
 
 def test_get_student_by_id_zero():
+    """Returns None for student ID 0."""
     db = Database(db_path=":memory:", seed_defaults=True)
     student = db.get_student_by_id(0)
     assert student is None
@@ -117,6 +133,7 @@ def test_get_student_by_id_zero():
 
 
 def test_add_student_duplicate_email():
+    """Rejects duplicate student emails with a None result."""
     db = Database(db_path=":memory:", seed_defaults=False)
     db.add_student("John", "Doe", "john.doe@example.com", "2000-01-01")
     duplicate = db.add_student("Jane", "Doe", "john.doe@example.com", "2001-01-01")
@@ -125,6 +142,7 @@ def test_add_student_duplicate_email():
 
 
 def test_update_student_nonexistent_id():
+    """Updating a missing student returns success with no student payload."""
     db = Database(db_path=":memory:", seed_defaults=True)
     success, student = db.update_student(
         9999, "Ghost", "User", "ghost@example.com", "2000-01-01"
@@ -135,6 +153,7 @@ def test_update_student_nonexistent_id():
 
 
 def test_update_student_duplicate_email():
+    """Rejects student email updates that violate uniqueness."""
     db = Database(db_path=":memory:", seed_defaults=True)
     bob = db.get_student_by_id(2)
     success, student = db.update_student(1, "Alice", "Smith", bob.email, "2000-01-01")
@@ -144,6 +163,7 @@ def test_update_student_duplicate_email():
 
 
 def test_delete_student_nonexistent_id():
+    """Deleting a missing student is treated as a no-op success."""
     db = Database(db_path=":memory:", seed_defaults=True)
     result = db.delete_student(9999)
     assert result is True
@@ -152,6 +172,7 @@ def test_delete_student_nonexistent_id():
 
 
 def test_get_all_classes_empty_db():
+    """Returns an empty class list when none exist."""
     db = Database(db_path=":memory:", seed_defaults=False)
     classes = db.get_all_classes()
     assert classes == []
@@ -159,6 +180,7 @@ def test_get_all_classes_empty_db():
 
 
 def test_get_class_by_id_nonexistent():
+    """Returns None for a nonexistent class ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     cls = db.get_class_by_id(9999)
     assert cls is None
@@ -166,6 +188,7 @@ def test_get_class_by_id_nonexistent():
 
 
 def test_get_class_by_id_invalid_type():
+    """Returns None when class lookup uses an invalid ID type."""
     db = Database(db_path=":memory:", seed_defaults=True)
     cls = db.get_class_by_id("invalid")
     assert cls is None
@@ -173,6 +196,7 @@ def test_get_class_by_id_invalid_type():
 
 
 def test_delete_class_nonexistent_id():
+    """Deleting a missing class is treated as a no-op success."""
     db = Database(db_path=":memory:", seed_defaults=True)
     result = db.delete_class(9999)
     assert result is True
@@ -181,6 +205,7 @@ def test_delete_class_nonexistent_id():
 
 
 def test_get_students_by_class_id_no_enrolments():
+    """Returns no students for a class with no enrolments."""
     db = Database(db_path=":memory:", seed_defaults=True)
     cls = db.add_class("Empty Class", 1)
     students = db.get_students_by_class_id(cls.id)
@@ -189,6 +214,7 @@ def test_get_students_by_class_id_no_enrolments():
 
 
 def test_set_students_for_class_empty_list_removes_all():
+    """Replacing class enrolments with an empty list removes all students."""
     db = Database(db_path=":memory:", seed_defaults=True)
     success = db.set_students_for_class(1, [])
     assert success is True
@@ -197,6 +223,7 @@ def test_set_students_for_class_empty_list_removes_all():
 
 
 def test_set_students_for_class_nonexistent_class():
+    """Returns False when setting enrolments for a missing class."""
     db = Database(db_path=":memory:", seed_defaults=True)
     success = db.set_students_for_class(9999, [1, 2])
     assert success is False
@@ -204,6 +231,7 @@ def test_set_students_for_class_nonexistent_class():
 
 
 def test_get_classes_by_student_id_returns_enrolled_classes():
+    """Returns all classes a student is enrolled in."""
     db = Database(db_path=":memory:", seed_defaults=False)
     student = db.add_student("Ava", "Reed", "ava@example.com", "2005-01-01")
     teacher = db.add_teacher("Paul", "West", "paul@example.com")
@@ -225,6 +253,7 @@ def test_get_classes_by_student_id_returns_enrolled_classes():
 
 
 def test_set_and_get_grade_for_student_in_class():
+    """Creates a class grade and verifies it can be retrieved."""
     db = Database(db_path=":memory:", seed_defaults=True)
     success, grade = db.set_grade_for_student_in_class(1, 1, GradeEnum.A)
     assert success is True
@@ -240,6 +269,7 @@ def test_set_and_get_grade_for_student_in_class():
 
 
 def test_update_existing_grade_for_student_in_class():
+    """Updates an existing class grade in place."""
     db = Database(db_path=":memory:", seed_defaults=True)
     first_success, _ = db.set_grade_for_student_in_class(1, 1, GradeEnum.B)
     second_success, updated = db.set_grade_for_student_in_class(1, 1, GradeEnum.A)
@@ -251,6 +281,7 @@ def test_update_existing_grade_for_student_in_class():
 
 
 def test_set_grade_fails_when_student_not_enrolled():
+    """Rejects grade assignment when student is not enrolled in the class."""
     db = Database(db_path=":memory:", seed_defaults=True)
     cls = db.add_class("History 101", 1)
     assert cls is not None
@@ -261,6 +292,7 @@ def test_set_grade_fails_when_student_not_enrolled():
 
 
 def test_set_grade_fails_for_invalid_grade_value():
+    """Rejects invalid grade values outside the GradeEnum set."""
     db = Database(db_path=":memory:", seed_defaults=True)
     success, grade = db.set_grade_for_student_in_class(1, 1, "Z")
     assert success is False
@@ -269,6 +301,7 @@ def test_set_grade_fails_for_invalid_grade_value():
 
 
 def test_get_grades_for_student_returns_class_grades():
+    """Returns all class-level grades for a student."""
     db = Database(db_path=":memory:", seed_defaults=False)
     student = db.add_student("Sam", "Taylor", "sam@example.com", "2005-05-01")
     teacher = db.add_teacher("Emma", "Stone", "emma@example.com")

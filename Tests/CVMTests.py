@@ -2,7 +2,12 @@ from Utils.Database import Database
 from Utils.ViewModels.ClassViewModel import ClassViewModel
 
 
+"""This file contains the unit tests for the ClassViewModel class. These tests cover the basic CRUD operations as well as some edge cases.
+"""
+
+
 def test_class_view_model_initialization():
+    """Verifies the view model loads seeded classes on initialization."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     assert len(vm.classes) == 2
@@ -12,6 +17,7 @@ def test_class_view_model_initialization():
 
 
 def test_get_class_by_id():
+    """Returns the expected class for a valid class ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     cls = vm.get_class_by_id(1)
@@ -21,6 +27,7 @@ def test_get_class_by_id():
 
 
 def test_get_class_by_id_boundary():
+    """Returns None when get_class_by_id receives an invalid ID type."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     cls = vm.get_class_by_id("invalid_id")
@@ -29,6 +36,7 @@ def test_get_class_by_id_boundary():
 
 
 def test_add_class():
+    """Adds a class and confirms it is reflected in the local list."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     vm.add_class("History 102", 2)
@@ -39,6 +47,7 @@ def test_add_class():
 
 
 def test_delete_class():
+    """Deletes a class and confirms it is removed from the local list."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     vm.delete_class(1)
@@ -49,6 +58,7 @@ def test_delete_class():
 
 
 def test_update_class():
+    """Updates class data and verifies the updated values are present."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     vm.update_class(1, "Advanced Math 101", 2)
@@ -61,6 +71,7 @@ def test_update_class():
 
 # boundary/edge cases
 def test_class_view_model_empty_db():
+    """Initializes correctly with an empty database."""
     db = Database(db_path=":memory:", seed_defaults=False)
     vm = ClassViewModel(db)
     assert vm.classes == []
@@ -68,6 +79,7 @@ def test_class_view_model_empty_db():
 
 
 def test_get_class_by_id_nonexistent():
+    """Returns None for a nonexistent class ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     cls = vm.get_class_by_id(9999)
@@ -76,6 +88,7 @@ def test_get_class_by_id_nonexistent():
 
 
 def test_get_class_by_id_invalid_type():
+    """Returns None for an invalid non-integer ID input."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     cls = vm.get_class_by_id("not_an_int")
@@ -84,6 +97,7 @@ def test_get_class_by_id_invalid_type():
 
 
 def test_add_multiple_classes_same_teacher():
+    """Allows multiple classes to be added for the same teacher."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     vm.add_class("Art 101", 1)
@@ -95,6 +109,7 @@ def test_add_multiple_classes_same_teacher():
 
 
 def test_delete_class_nonexistent_id():
+    """Leaves class list unchanged when deleting a nonexistent class ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     vm.delete_class(9999)
@@ -103,6 +118,7 @@ def test_delete_class_nonexistent_id():
 
 
 def test_update_class_nonexistent_id():
+    """Leaves class list unchanged when updating a nonexistent class ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     vm.update_class(9999, "Ghost Class", 1)
@@ -112,6 +128,7 @@ def test_update_class_nonexistent_id():
 
 
 def test_delete_all_classes():
+    """Deletes all classes and confirms the list becomes empty."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = ClassViewModel(db)
     vm.delete_class(1)

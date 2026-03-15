@@ -249,6 +249,9 @@ class Classes(ctk.CTkFrame):
 
     def _show_add_frame(self):
         """Shows the add frame and initialise the available and selected lists for the student picker, and clears any existing input in the entry fields."""
+        self.add_teacher_combobox.configure(
+            values=[t.name() for t in self.controller.teacher_vm.teachers]
+        )
         self._add_available = list(self.controller.student_vm.students)
         self._add_selected = []
         self._add_highlighted_available = []

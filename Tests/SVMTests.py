@@ -1,8 +1,13 @@
 from Utils.Database import Database
 from Utils.ViewModels.StudentViewModel import StudentViewModel
 
+"""
+This file contains the unit tests for the StudentViewModel class. These tests cover the basic CRUD operations as well as some edge cases.
+"""
+
 
 def test_student_view_model_initialization():
+    """Tests that the StudentViewModel initializes correctly and loads students from the database."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = StudentViewModel(db)
     assert len(vm.students) == 3
@@ -13,6 +18,7 @@ def test_student_view_model_initialization():
 
 
 def test_get_student_by_id():
+    """Tests that the get_student_by_id method returns the correct student when given a valid ID, and returns None for an invalid ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = StudentViewModel(db)
     student = vm.get_student_by_id(1)
@@ -22,6 +28,7 @@ def test_get_student_by_id():
 
 
 def test_add_student():
+    """Tests that the add_student method adds a new student to the database and updates the students list."""
     db = Database(db_path=":memory:", seed_defaults=False)
     vm = StudentViewModel(db)
     vm.add_student("John", "Doe", "johndoe@example.com", "2000-01-01")
@@ -35,6 +42,7 @@ def test_add_student():
 
 
 def test_delete_student():
+    """Tests that the delete_student method removes a student from the database and updates the students list."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = StudentViewModel(db)
     vm.delete_student(1)
@@ -45,6 +53,7 @@ def test_delete_student():
 
 
 def test_update_student():
+    """Tests that the update_student method updates a student's information in the database and updates the students list."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = StudentViewModel(db)
     vm.update_student(1, "John", "Smith", "johnsmith@example.com", "1999-12-31")
@@ -60,6 +69,7 @@ def test_update_student():
 
 # boundary/edge cases
 def test_student_view_model_empty_db():
+    """Tests that the StudentViewModel initializes correctly when the database is empty and that get_student_by_id returns None."""
     db = Database(db_path=":memory:", seed_defaults=False)
     vm = StudentViewModel(db)
     assert vm.students == []
@@ -67,6 +77,7 @@ def test_student_view_model_empty_db():
 
 
 def test_get_student_by_id_nonexistent():
+    """Tests that the get_student_by_id method returns None for a nonexistent student ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = StudentViewModel(db)
     student = vm.get_student_by_id(9999)
@@ -75,6 +86,7 @@ def test_get_student_by_id_nonexistent():
 
 
 def test_get_student_by_id_zero():
+    """Tests that the get_student_by_id method returns None for a student ID of 0."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = StudentViewModel(db)
     student = vm.get_student_by_id(0)
@@ -83,6 +95,7 @@ def test_get_student_by_id_zero():
 
 
 def test_add_student_duplicate_email():
+    """Tests that the add_student method does not allow adding a student with a duplicate email address."""
     db = Database(db_path=":memory:", seed_defaults=False)
     vm = StudentViewModel(db)
     vm.add_student("John", "Doe", "johndoe@example.com", "2000-01-01")
@@ -92,6 +105,7 @@ def test_add_student_duplicate_email():
 
 
 def test_delete_student_nonexistent_id():
+    """Tests that the delete_student method does not change the students list when given a nonexistent student ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = StudentViewModel(db)
     vm.delete_student(9999)
@@ -100,6 +114,7 @@ def test_delete_student_nonexistent_id():
 
 
 def test_update_student_nonexistent_id():
+    """Tests that the update_student method does not change the students list when given a nonexistent student ID."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = StudentViewModel(db)
     vm.update_student(9999, "Ghost", "User", "ghost@example.com", "2000-01-01")
@@ -109,6 +124,7 @@ def test_update_student_nonexistent_id():
 
 
 def test_delete_all_students():
+    """Tests that all students can be deleted from the database and that the students list is updated accordingly."""
     db = Database(db_path=":memory:", seed_defaults=True)
     vm = StudentViewModel(db)
     for student in list(vm.students):

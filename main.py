@@ -1,6 +1,7 @@
 from UI.Home import Home
 from UI.Students import Students
 from UI.Classes import Classes
+from UI.Teachers import Teachers
 from Utils.Database import Database
 from Utils.ViewModels.TeacherViewModel import TeacherViewModel
 from Utils.ViewModels.StudentViewModel import StudentViewModel
@@ -44,6 +45,9 @@ class App(ctk.CTk):
             self.sidebar, text="Students", command=lambda: self.show_frame(Students)
         ).pack(pady=10, padx=10)
         ctk.CTkButton(
+            self.sidebar, text="Teachers", command=lambda: self.show_frame(Teachers)
+        ).pack(pady=10, padx=10)
+        ctk.CTkButton(
             self.sidebar, text="Classes", command=lambda: self.show_frame(Classes)
         ).pack(pady=10, padx=10)
         ctk.CTkButton(self.sidebar, text="Exit", command=self.destroy).pack(
@@ -58,7 +62,7 @@ class App(ctk.CTk):
 
         # Makes each frame, and adds it to the container, and stores it in a dictionary for easy access
         self.frames = {}
-        for Page in (Home, Students, Classes):
+        for Page in (Home, Students, Teachers, Classes):
             frame = Page(self.container, self)
             self.frames[Page] = frame
             frame.grid(row=0, column=0, sticky="nsew")
