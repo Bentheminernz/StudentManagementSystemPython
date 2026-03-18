@@ -1,5 +1,11 @@
 from tkinter import ttk
 from Utils.Dataclasses import Student
+from Utils.Validation import (
+    ValidationError,
+    validate_date_of_birth,
+    validate_email,
+    validate_person_name,
+)
 import tkinter as tk
 import customtkinter as ctk
 import sys
@@ -37,6 +43,21 @@ class Students(ctk.CTkFrame):
     def show_frame(self, name: str):
         """Brings the specified frame to the front to make it visible."""
         self.frames[name].lift()
+
+    def _validate_student_inputs(
+        self, first_name: str, last_name: str, email: str, date_of_birth: str
+    ) -> tuple[str, str, str, str]:
+        """Normalizes and validates add/edit student form inputs."""
+        validated_first_name = validate_person_name(first_name, field_name="First name")
+        validated_last_name = validate_person_name(last_name, field_name="Last name")
+        validated_email = validate_email(email)
+        validated_date_of_birth = validate_date_of_birth(date_of_birth)
+        return (
+            validated_first_name,
+            validated_last_name,
+            validated_email,
+            validated_date_of_birth,
+        )
 
     def _build_list_frame(self, frame: ctk.CTkFrame):
         """Builds the list frame, which displays the list of students and allows the user to add, edit, and delete students."""
@@ -193,6 +214,7 @@ class Students(ctk.CTkFrame):
             return
         self.student_listbox.selection_set(row)
         student_id = self.student_listbox.item(row)["values"][0]
+
         student = self.controller.student_vm.get_student_by_id(student_id)
         if not student:
             return
@@ -327,29 +349,60 @@ class Students(ctk.CTkFrame):
         student_id = getattr(self, "_editing_student_id", None)
         if student_id is None:
             selected = self.student_listbox.selection()
+
             if not selected:
                 return
             student_id = self.student_listbox.item(selected[0])["values"][0]
-        self.controller.student_vm.update_student(
-            student_id,
-            self.edit_first_name_entry.get(),
-            self.edit_last_name_entry.get(),
-            self.edit_email_entry.get(),
-            self.edit_dob_entry.get(),
+
+        try:
+            first_name, last_name, email, date_of_birth = self._validate_student_inputs(
+                self.edit_first_name_entry.get(),
+                self.edit_last_name_entry.get(),
+                self.edit_email_entry.get(),
+                self.edit_dob_entry.get(),
+            )
+        except ValidationError as exc:
+            self.edit_error_label.configure(text=str(exc))
+            return
+
+        success, _student = self.controller.db.update_student(
+            student_id, first_name, last_name, email, date_of_birth
         )
-        self.controller.student_vm.students = self.controller.db.get_all_students()
-        self._refresh_list()
-        self.show_frame("list")
+        if success:
+            self.edit_error_label.configure(text="")
+            self.controller.student_vm.students = self.controller.db.get_all_students()
+            self._refresh_list()
+            self.show_frame("list")
+        else:
+            self.edit_error_label.configure(
+                text="Failed to update student. Email may already exist."
+            )
 
     def _save_student(self):
         """Saves the new student to the database with the details entered in the add frame, and refreshes the list to show the new student."""
+        try:
+            first_name, last_name, email, date_of_birth = self._validate_student_inputs(
+                self.first_name_entry.get(),
+                self.last_name_entry.get(),
+                self.email_entry.get(),
+                self.dob_entry.get(),
+            )
+        except ValidationError as exc:
+            self.add_error_label.configure(text=str(exc))
+            return
+
         student = self.controller.db.add_student(
-            self.first_name_entry.get(),
-            self.last_name_entry.get(),
-            self.email_entry.get(),
-            self.dob_entry.get(),
+            first_name,
+            last_name,
+            email,
+            date_of_birth,
         )
         if student:
+            self.add_error_label.configure(text="")
+            self.first_name_entry.delete(0, "end")
+            self.last_name_entry.delete(0, "end")
+            self.email_entry.delete(0, "end")
+            self.dob_entry.delete(0, "end")
             self.controller.student_vm.students = self.controller.db.get_all_students()
             self._refresh_list()
             self.show_frame("list")

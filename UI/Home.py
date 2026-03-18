@@ -30,6 +30,7 @@ class Home(ctk.CTkFrame):
         """Refreshes the quick facts by reloading the data from the database and updating the text of the quick facts label."""
         self.controller.class_vm.load_classes()
         self.controller.student_vm.load_students()
+
         self.controller.teacher_vm.load_teachers()
 
         number_of_classes = len(self.controller.class_vm.classes)

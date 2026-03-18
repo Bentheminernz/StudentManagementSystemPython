@@ -1,5 +1,6 @@
 from tkinter import ttk
 from Utils.Dataclasses import Teacher
+from Utils.Validation import ValidationError, validate_email, validate_person_name
 import tkinter as tk
 import customtkinter as ctk
 import sys
@@ -37,6 +38,15 @@ class Teachers(ctk.CTkFrame):
     def show_frame(self, name: str):
         """Brings the specified frame to the front to make it visible."""
         self.frames[name].lift()
+
+    def _validate_teacher_inputs(
+        self, first_name: str, last_name: str, email: str
+    ) -> tuple[str, str, str]:
+        """Normalizes and validates add/edit teacher form inputs."""
+        validated_first_name = validate_person_name(first_name, field_name="First name")
+        validated_last_name = validate_person_name(last_name, field_name="Last name")
+        validated_email = validate_email(email)
+        return validated_first_name, validated_last_name, validated_email
 
     def on_show(self):
         """Refreshes teacher data whenever this page is displayed."""
@@ -159,14 +169,14 @@ class Teachers(ctk.CTkFrame):
 
     def _save_teacher(self):
         """Saves a new teacher and refreshes list state on success."""
-        first_name = self.first_name_entry.get().strip()
-        last_name = self.last_name_entry.get().strip()
-        email = self.email_entry.get().strip()
-
-        if not first_name or not last_name or not email:
-            self.add_error_label.configure(
-                text="First name, last name, and email are required."
+        try:
+            first_name, last_name, email = self._validate_teacher_inputs(
+                self.first_name_entry.get(),
+                self.last_name_entry.get(),
+                self.email_entry.get(),
             )
+        except ValidationError as exc:
+            self.add_error_label.configure(text=str(exc))
             return
 
         teacher = self.controller.db.add_teacher(first_name, last_name, email)
@@ -239,14 +249,14 @@ class Teachers(ctk.CTkFrame):
                 return
             teacher_id = self.teacher_listbox.item(selected[0])["values"][0]
 
-        first_name = self.edit_first_name_entry.get().strip()
-        last_name = self.edit_last_name_entry.get().strip()
-        email = self.edit_email_entry.get().strip()
-
-        if not first_name or not last_name or not email:
-            self.edit_error_label.configure(
-                text="First name, last name, and email are required."
+        try:
+            first_name, last_name, email = self._validate_teacher_inputs(
+                self.edit_first_name_entry.get(),
+                self.edit_last_name_entry.get(),
+                self.edit_email_entry.get(),
             )
+        except ValidationError as exc:
+            self.edit_error_label.configure(text=str(exc))
             return
 
         success, _teacher = self.controller.db.update_teacher(
