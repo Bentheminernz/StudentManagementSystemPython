@@ -11,6 +11,7 @@ from Utils.Validation import (
     validate_positive_int,
     validate_positive_int_list,
 )
+from typing import Literal
 
 
 """
@@ -33,11 +34,29 @@ class Database:
         if seed_defaults:
             self._seed_defaults()
 
-    def _record_exists(self, table_name: str, record_id: int) -> bool:
+    def _record_exists(
+        self,
+        table_name: Literal[
+            "admin", "student", "teacher", "class", "grade", "class_student"
+        ],  # utilising a Literal type to restrict the allowed table names and prevent SQL injection
+        record_id: int,
+    ) -> bool:
         """Returns True when the requested table contains a row with the given ID."""
-        row = self.conn.execute(
-            f"SELECT 1 FROM {table_name} WHERE id = ?;", (record_id,)
-        ).fetchone()
+        allowed_tables = [
+            "admin",
+            "student",
+            "teacher",
+            "class",
+            "grade",
+            "class_student",
+        ]
+
+        if table_name not in allowed_tables:
+            raise ValueError(f"Invalid table name: {table_name}")
+
+        query = f"SELECT 1 FROM {table_name} WHERE id = ?;"
+        row = self.conn.execute(query, (record_id,)).fetchone()
+
         return row is not None
 
     def close(self) -> None:

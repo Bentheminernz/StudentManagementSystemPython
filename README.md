@@ -6,7 +6,7 @@ This is my submission for the NZQA Level 3 Digital Technologies AS91906 standard
 Before starting make sure you have the following installed:
 - [uv](https://github.com/astral-sh/uv#installation) for Python dependency management 
 
-### 1. Clone the Respository
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/Bentheminernz/StudentManagementSystemPython
 cd StudentManagementSystemPython
