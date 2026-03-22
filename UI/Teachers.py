@@ -96,6 +96,9 @@ class Teachers(ctk.CTkFrame):
         # Darwin (macOS) uses Button-2 for right-click, while Windows/Linux use Button-3.
         if sys.platform == "darwin":
             self.teacher_listbox.bind("<Button-2>", show_context_menu)
+            self.teacher_listbox.bind(
+                "<Control-Button-1>", show_context_menu
+            )  # also bind ctrl+click for right-click on macOSCan you
         else:
             self.teacher_listbox.bind("<Button-3>", show_context_menu)
 

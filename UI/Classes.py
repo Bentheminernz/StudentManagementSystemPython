@@ -85,6 +85,9 @@ class Classes(ctk.CTkFrame):
         # Darwin (macOS) uses Button-2 for right-click, while Windows (and hopefully Linux) use Button-3
         if sys.platform == "darwin":
             self.class_listbox.bind("<Button-2>", show_context_menu)
+            self.class_listbox.bind(
+                "<Control-Button-1>", show_context_menu
+            )  # also bind ctrl+click for right-click on macOS
         else:
             self.class_listbox.bind("<Button-3>", show_context_menu)
 
@@ -702,8 +705,10 @@ class Classes(ctk.CTkFrame):
         student_id = selected_values[0]
         grade_value = self._detail_grade_combobox.get()
 
-        success, _ = self.controller.db.set_grade_for_student_in_class(
-            student_id, self._detail_class_id, grade_value
+        success, _, reason = (
+            self.controller.db.set_grade_for_student_in_class_with_reason(
+                student_id, self._detail_class_id, grade_value
+            )
         )
         if success:
             self._refresh_detail_students()
@@ -712,5 +717,6 @@ class Classes(ctk.CTkFrame):
             )
         else:
             self._detail_grade_status.configure(
-                text="Failed to save grade for this student/class.", text_color="red"
+                text=reason or "Failed to save grade for this student/class.",
+                text_color="red",
             )

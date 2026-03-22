@@ -602,13 +602,22 @@ class Database:
         self, student_id: int, class_id: int, grade_value: GradeEnum | str
     ) -> tuple[bool, Grade | None]:
         """Creates or updates a student's letter grade for a class."""
+        success, grade, _reason = self.set_grade_for_student_in_class_with_reason(
+            student_id, class_id, grade_value
+        )
+        return success, grade
+
+    def set_grade_for_student_in_class_with_reason(
+        self, student_id: int, class_id: int, grade_value: GradeEnum | str
+    ) -> tuple[bool, Grade | None, str | None]:
+        """Creates or updates a student's letter grade for a class and returns a user-facing failure reason when it fails."""
         try:
             validated_student_id = validate_positive_int(
                 student_id, field_name="Student ID"
             )
             validated_class_id = validate_positive_int(class_id, field_name="Class ID")
         except ValidationError:
-            return False, None
+            return False, None, "Invalid student or class selection."
 
         if isinstance(
             grade_value, GradeEnum
@@ -619,15 +628,15 @@ class Database:
         ):  # if the input is a string, try turn it into a GradeEnum
             candidate = grade_value.strip().upper()  # removes whitespace and converts to uppercase to allow for more flexible input (e.g. " a " would be accepted and normalized to "A")
             if not candidate:  # if its empty after stripping whitespace, it's not valid
-                return False, None
+                return False, None, "Please choose a valid grade."
             try:
                 normalized_grade = GradeEnum(
                     candidate
                 )  # this will raise a ValueError if the candidate string is not a valid GradeEnum value, which we catch and return False
             except ValueError:
-                return False, None
+                return False, None, "Please choose a valid grade."
         else:
-            return False, None
+            return False, None, "Please choose a valid grade."
 
         # English translation: "Check if there is a record in the class_student table where the class_id and student_id match the provided values."
         enrolled = self.conn.execute(
@@ -635,7 +644,7 @@ class Database:
             (validated_class_id, validated_student_id),
         ).fetchone()
         if enrolled is None:
-            return False, None
+            return False, None, "This student is not enrolled in this class."
 
         try:
             # English translation: "Insert a new record into the grade table with the provided student_id, class_id, and grade. If a record with the same student_id and class_id already exists, update that record's grade and updated_at timestamp to the new values."
@@ -650,12 +659,16 @@ class Database:
                 (validated_student_id, validated_class_id, normalized_grade.value),
             )
             self.conn.commit()
-            return True, self.get_grade_for_student_in_class(
-                validated_student_id, validated_class_id
+            return (
+                True,
+                self.get_grade_for_student_in_class(
+                    validated_student_id, validated_class_id
+                ),
+                None,
             )
         except sqlite3.IntegrityError:
             self.conn.rollback()
-            return False, None
+            return False, None, "Unable to save grade right now. Please try again."
 
     # Teacher Method
     def get_all_teachers(self) -> list[Teacher]:

@@ -141,6 +141,14 @@ def test_add_student_duplicate_email():
     db.close()
 
 
+def test_add_student_leap_day_on_non_leap_year():
+    """Rejects February 29 on a non-leap year."""
+    db = Database(db_path=":memory:", seed_defaults=False)
+    student = db.add_student("Leap", "Year", "leap.year@example.com", "2001-02-29")
+    assert student is None
+    db.close()
+
+
 def test_update_student_nonexistent_id():
     """Updating a missing student returns a failed status with no payload."""
     db = Database(db_path=":memory:", seed_defaults=True)
@@ -357,6 +365,23 @@ def test_set_grade_fails_when_student_not_enrolled():
     success, grade = db.set_grade_for_student_in_class(1, cls.id, GradeEnum.A)
     assert success is False
     assert grade is None
+    db.close()
+
+
+def test_set_grade_with_reason_fails_when_student_not_enrolled():
+    """Returns a specific reason when assigning a grade to a non-enrolled student."""
+    db = Database(db_path=":memory:", seed_defaults=True)
+    cls = db.add_class("History 101", 1)
+    assert cls is not None
+
+    success, grade, reason = db.set_grade_for_student_in_class_with_reason(
+        1, cls.id, GradeEnum.A
+    )
+
+    assert success is False
+    assert grade is None
+    assert reason == "This student is not enrolled in this class."
+    assert db.get_grade_for_student_in_class(1, cls.id) is None
     db.close()
 
 

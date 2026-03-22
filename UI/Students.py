@@ -109,6 +109,9 @@ class Students(ctk.CTkFrame):
         # On Darwin (macOS), the right click is Button-2, on Windows it's Button-3, (hopefully this works on Linux too)
         if sys.platform == "darwin":
             self.student_listbox.bind("<Button-2>", show_context_menu)
+            self.student_listbox.bind(
+                "<Control-Button-1>", show_context_menu
+            )  # also bind ctrl+click for right-click on macOS
         else:
             self.student_listbox.bind("<Button-3>", show_context_menu)
 
@@ -408,5 +411,5 @@ class Students(ctk.CTkFrame):
             self.show_frame("list")
         else:
             self.add_error_label.configure(
-                text="Failed to add student. Email may already exist."
+                text="Email is already registered. Please use a different email."
             )
