@@ -1,6 +1,6 @@
 from tkinter import ttk
 from Utils.Dataclasses import Teacher
-from Utils.Validation import ValidationError, validate_email, validate_person_name
+from Utils.Validation import ValidationError
 import tkinter as tk
 import customtkinter as ctk
 import sys
@@ -38,15 +38,6 @@ class Teachers(ctk.CTkFrame):
     def show_frame(self, name: str):
         """Brings the specified frame to the front to make it visible."""
         self.frames[name].lift()
-
-    def _validate_teacher_inputs(
-        self, first_name: str, last_name: str, email: str
-    ) -> tuple[str, str, str]:
-        """Normalizes and validates add/edit teacher form inputs."""
-        validated_first_name = validate_person_name(first_name, field_name="First name")
-        validated_last_name = validate_person_name(last_name, field_name="Last name")
-        validated_email = validate_email(email)
-        return validated_first_name, validated_last_name, validated_email
 
     def on_show(self):
         """Refreshes teacher data whenever this page is displayed."""
@@ -96,9 +87,6 @@ class Teachers(ctk.CTkFrame):
         # Darwin (macOS) uses Button-2 for right-click, while Windows/Linux use Button-3.
         if sys.platform == "darwin":
             self.teacher_listbox.bind("<Button-2>", show_context_menu)
-            self.teacher_listbox.bind(
-                "<Control-Button-1>", show_context_menu
-            )  # also bind ctrl+click for right-click on macOSCan you
         else:
             self.teacher_listbox.bind("<Button-3>", show_context_menu)
 
@@ -113,9 +101,11 @@ class Teachers(ctk.CTkFrame):
     def _refresh_list(self):
         """Refreshes the teacher list from the in-memory teacher view model state."""
         for item in self.teacher_listbox.get_children():
-            self.teacher_listbox.delete(item)
+            self.teacher_listbox.delete(
+                item
+            )  # clear existing list items before repopulating to avoid duplicates
 
-        for teacher in self.controller.teacher_vm.teachers:
+        for teacher in self.controller.teacher_vm.teachers:  # for teacher in the teacher view model's teacher list, insert a new row into the listbox with that teacher's data
             self.teacher_listbox.insert(
                 "",
                 "end",
@@ -131,11 +121,17 @@ class Teachers(ctk.CTkFrame):
 
     def _delete_teacher(self):
         """Deletes the selected teacher and returns to the list view."""
-        selected = self.teacher_listbox.selection()
+        selected = (
+            self.teacher_listbox.selection()
+        )  # gets currently selected teacher in the list
         if not selected:
             return
-        teacher_id = self.teacher_listbox.item(selected[0])["values"][0]
-        self._delete_teacher_by_id(teacher_id)
+        teacher_id = self.teacher_listbox.item(selected[0])["values"][
+            0
+        ]  # get the id of the selected teacher
+        self._delete_teacher_by_id(
+            teacher_id
+        )  # and delete the teacher by id, which also refreshes the list and class state and returns to the list view
 
     def _delete_teacher_by_id(self, teacher_id: int):
         """Deletes a teacher by ID and refreshes dependent teacher/class state."""
@@ -143,9 +139,12 @@ class Teachers(ctk.CTkFrame):
         self.controller.teacher_vm.load_teachers()
         self.controller.class_vm.load_classes()
 
-        if getattr(self, "_editing_teacher_id", None) == teacher_id:
+        if (
+            getattr(self, "_editing_teacher_id", None) == teacher_id
+        ):  # if currently editing teacher is the one that was just deleted, clear the editing teacher id from the instance to avoid stale reference
             self._editing_teacher_id = None
 
+        # refresh and back to list
         self._refresh_list()
         self.show_frame("list")
 
@@ -173,17 +172,23 @@ class Teachers(ctk.CTkFrame):
     def _save_teacher(self):
         """Saves a new teacher and refreshes list state on success."""
         try:
-            first_name, last_name, email = self._validate_teacher_inputs(
-                self.first_name_entry.get(),
-                self.last_name_entry.get(),
-                self.email_entry.get(),
+            first_name, last_name, email = (
+                self._validate_teacher_inputs(  # validates the form inputs
+                    self.first_name_entry.get(),
+                    self.last_name_entry.get(),
+                    self.email_entry.get(),
+                )
             )
         except ValidationError as exc:
-            self.add_error_label.configure(text=str(exc))
+            self.add_error_label.configure(
+                text=str(exc)
+            )  # if there is a validation error, show it in the form
             return
 
-        teacher = self.controller.db.add_teacher(first_name, last_name, email)
-        if teacher:
+        teacher = self.controller.db.add_teacher(
+            first_name, last_name, email
+        )  # attempt to add the teacher to the db
+        if teacher:  # if added successfully, clear the form and refresh the list
             self.add_error_label.configure(text="")
             self.first_name_entry.delete(0, "end")
             self.last_name_entry.delete(0, "end")
@@ -193,28 +198,39 @@ class Teachers(ctk.CTkFrame):
             self._refresh_list()
             self.show_frame("list")
         else:
+            # otherwise show an error (hardcoded email uniqueness constraint error since that's the only failure case for add_teacher)
             self.add_error_label.configure(
                 text="Failed to add teacher. Email may already exist."
             )
 
     def _show_edit_frame(self):
         """Shows the edit form for the currently selected teacher."""
-        selected = self.teacher_listbox.selection()
+        selected = (
+            self.teacher_listbox.selection()
+        )  # gets currently selected teacher in the list
         if not selected:
-            return
-        teacher_id = self.teacher_listbox.item(selected[0])["values"][0]
-        self._show_edit_frame_for_teacher(teacher_id)
+            return  # if not selection, do nothing
+        teacher_id = self.teacher_listbox.item(selected[0])["values"][
+            0
+        ]  # otherwise get the id of the selected teacher
+        self._show_edit_frame_for_teacher(
+            teacher_id
+        )  # and show the edit form for that teacher id
 
     def _show_edit_frame_for_teacher(self, teacher_id: int):
         """Shows edit form for a specific teacher ID."""
-        teacher = self.controller.teacher_vm.get_teacher_by_id(teacher_id)
+        teacher = self.controller.teacher_vm.get_teacher_by_id(
+            teacher_id
+        )  # get the teacher object for the specified id
         if teacher:
-            self._editing_teacher_id = teacher_id
-            frame = self.frames["edit"]
-            for widget in frame.winfo_children():
+            self._editing_teacher_id = teacher_id  # store the currently editing teacher id in the instance for reference when saving edits
+            frame = self.frames["edit"]  # get the edit frame
+            for widget in frame.winfo_children():  # clear the edit frame of any existing widgets (important when editing multiple teachers in a row to avoid widget stacking)
                 widget.destroy()
-            self._build_edit_frame(teacher, frame)
-            self.show_frame("edit")
+            self._build_edit_frame(
+                teacher, frame
+            )  # build the edit form for the specified teacher
+            self.show_frame("edit")  # show the edit frame
         else:
             print("Selected teacher not found.")
 
@@ -245,56 +261,86 @@ class Teachers(ctk.CTkFrame):
 
     def _update_teacher(self):
         """Updates the selected teacher and refreshes dependent state on success."""
-        teacher_id = getattr(self, "_editing_teacher_id", None)
-        if teacher_id is None:
-            selected = self.teacher_listbox.selection()
+        teacher_id = getattr(
+            self, "_editing_teacher_id", None
+        )  # get the currently editing teacher id from the instance (set when opening the edit form)
+        if teacher_id is None:  # if no teacher id
+            selected = (
+                self.teacher_listbox.selection()
+            )  # attempt to get selected teacher
             if not selected:
-                return
-            teacher_id = self.teacher_listbox.item(selected[0])["values"][0]
+                return  # do nothing if no selection
+            teacher_id = self.teacher_listbox.item(
+                selected[0]
+            )[
+                "values"
+            ][
+                0
+            ]  # otherwise get the teacher id from the selected teacher in the list as a fallback
 
         try:
-            first_name, last_name, email = self._validate_teacher_inputs(
-                self.edit_first_name_entry.get(),
-                self.edit_last_name_entry.get(),
-                self.edit_email_entry.get(),
+            first_name, last_name, email = (
+                self._validate_teacher_inputs(  # validate the form inputs
+                    self.edit_first_name_entry.get(),
+                    self.edit_last_name_entry.get(),
+                    self.edit_email_entry.get(),
+                )
             )
         except ValidationError as exc:
+            # if there is a validation error, show it in the form and do not attempt to update the teacher
             self.edit_error_label.configure(text=str(exc))
             return
 
-        success, _teacher = self.controller.db.update_teacher(
-            teacher_id,
-            first_name,
-            last_name,
-            email,
+        success, _teacher = (
+            self.controller.db.update_teacher(  # attempt to update the teacher in the db with the new values
+                teacher_id,
+                first_name,
+                last_name,
+                email,
+            )
         )
         if success:
-            self.edit_error_label.configure(text="")
-            self.controller.teacher_vm.load_teachers()
-            self._refresh_list()
-            self.show_frame("list")
+            self.edit_error_label.configure(
+                text=""
+            )  # if update successful, clear any existing error message in the form
+            self.controller.teacher_vm.load_teachers()  # load the updated teacher list into the teacher view model
+            self._refresh_list()  # refresh the teacher list in the list frame to reflect any changes from the update
+            self.show_frame("list")  # return to the list frame
         else:
+            # if update failed, show an error (hardcoded email uniqueness constraint error since that's the only failure case for update_teacher)
             self.edit_error_label.configure(
                 text="Failed to update teacher. Email may already exist."
             )
 
     def _on_double_click(self, event):
         """Shows a teacher detail view when a list row is double-clicked."""
-        row = self.teacher_listbox.identify_row(event.y)
+        row = self.teacher_listbox.identify_row(
+            event.y
+        )  # get the row that was double-clicked
         if not row:
-            return
+            return  # if no row identified, do nothing
 
-        self.teacher_listbox.selection_set(row)
-        teacher_id = self.teacher_listbox.item(row)["values"][0]
-        teacher = self.controller.teacher_vm.get_teacher_by_id(teacher_id)
+        self.teacher_listbox.selection_set(
+            row
+        )  # set the selected row in the listbox to the double-clicked row
+        teacher_id = self.teacher_listbox.item(row)["values"][
+            0
+        ]  # get the teacher id from the selected row's values
+        teacher = self.controller.teacher_vm.get_teacher_by_id(
+            teacher_id
+        )  # get the teacher object for the specified id
         if not teacher:
-            return
+            return  # if no teacher found for the id, do nothing
 
-        frame = self.frames["detail"]
-        for widget in frame.winfo_children():
+        frame = self.frames["detail"]  # get the detail frame
+        for (
+            widget
+        ) in frame.winfo_children():  # clear the detail frame of any existing widgets
             widget.destroy()
-        self._build_detail_frame(teacher, frame)
-        self.show_frame("detail")
+        self._build_detail_frame(
+            teacher, frame
+        )  # build the teacher detail view for the specified teacher
+        self.show_frame("detail")  # show the detail frame
 
     def _build_detail_frame(self, teacher: Teacher, frame: ctk.CTkFrame):
         """Builds teacher detail view, including classes taught by that teacher."""
@@ -324,19 +370,19 @@ class Teachers(ctk.CTkFrame):
             "Students": 80,
             "Updated At": 180,
         }
-        for col in columns:
+        for col in columns:  # for column in columns, set the column width and heading text for the class list treeview
             class_list.column(col, anchor=tk.W, width=col_widths[col])
             class_list.heading(col, text=col, anchor=tk.W)
         class_list.pack(pady=5, padx=20, fill="both", expand=True)
 
         self.controller.class_vm.load_classes()
-        taught_classes = [
+        taught_classes = [  # for each class, filter to only include classes where the teacher_id matches the current teacher's id to get the list of classes taught by this teacher
             cls
             for cls in self.controller.class_vm.classes
             if cls.teacher_id == teacher.id
         ]
 
-        for taught_class in taught_classes:
+        for taught_class in taught_classes:  # for each class taught by this teacher, get the count of students in that class and insert a new row into the class list treeview with the class data
             student_count = len(
                 self.controller.db.get_students_by_class_id(taught_class.id)
             )
