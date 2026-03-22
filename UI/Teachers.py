@@ -1,6 +1,6 @@
 from tkinter import ttk
 from Utils.Dataclasses import Teacher
-from Utils.Validation import ValidationError
+from Utils.Validation import ValidationError, validate_email, validate_person_name
 import tkinter as tk
 import customtkinter as ctk
 import sys
@@ -43,6 +43,15 @@ class Teachers(ctk.CTkFrame):
         """Refreshes teacher data whenever this page is displayed."""
         self.controller.teacher_vm.load_teachers()
         self._refresh_list()
+
+    def _validate_teacher_inputs(
+        self, first_name: str, last_name: str, email: str
+    ) -> tuple[str, str, str]:
+        """Normalizes and validates add/edit teacher form inputs."""
+        validated_first_name = validate_person_name(first_name, field_name="First name")
+        validated_last_name = validate_person_name(last_name, field_name="Last name")
+        validated_email = validate_email(email)
+        return validated_first_name, validated_last_name, validated_email
 
     def _build_list_frame(self, frame: ctk.CTkFrame):
         """Builds the list frame with teacher records and context actions."""
@@ -87,6 +96,9 @@ class Teachers(ctk.CTkFrame):
         # Darwin (macOS) uses Button-2 for right-click, while Windows/Linux use Button-3.
         if sys.platform == "darwin":
             self.teacher_listbox.bind("<Button-2>", show_context_menu)
+            self.teacher_listbox.bind(
+                "<Control-Button-1>", show_context_menu
+            )  # Also bind Ctrl+Click for macOS right-click
         else:
             self.teacher_listbox.bind("<Button-3>", show_context_menu)
 
