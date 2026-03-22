@@ -58,9 +58,9 @@ class StudentViewModel:
             student_id, first_name, last_name, email, date_of_birth
         )
         if success:
-            for i, s in enumerate(self.students):
-                if s.id == student_id:
-                    self.students[i] = student
+            for index, current_student in enumerate(self.students):
+                if current_student.id == student_id:
+                    self.students[index] = student
                     break
         else:
             print("Failed to update student in the database.")

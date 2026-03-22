@@ -141,13 +141,21 @@ def test_add_student_duplicate_email():
     db.close()
 
 
+def test_add_student_leap_day_on_non_leap_year():
+    """Rejects February 29 on a non-leap year."""
+    db = Database(db_path=":memory:", seed_defaults=False)
+    student = db.add_student("Leap", "Year", "leap.year@example.com", "2001-02-29")
+    assert student is None
+    db.close()
+
+
 def test_update_student_nonexistent_id():
-    """Updating a missing student returns success with no student payload."""
+    """Updating a missing student returns a failed status with no payload."""
     db = Database(db_path=":memory:", seed_defaults=True)
     success, student = db.update_student(
         9999, "Ghost", "User", "ghost@example.com", "2000-01-01"
     )
-    assert success is True
+    assert success is False
     assert student is None
     db.close()
 
@@ -163,10 +171,10 @@ def test_update_student_duplicate_email():
 
 
 def test_delete_student_nonexistent_id():
-    """Deleting a missing student is treated as a no-op success."""
+    """Deleting a missing student returns False and leaves data unchanged."""
     db = Database(db_path=":memory:", seed_defaults=True)
     result = db.delete_student(9999)
-    assert result is True
+    assert result is False
     assert len(db.get_all_students()) == 3
     db.close()
 
@@ -196,11 +204,80 @@ def test_get_class_by_id_invalid_type():
 
 
 def test_delete_class_nonexistent_id():
-    """Deleting a missing class is treated as a no-op success."""
+    """Deleting a missing class returns False and leaves data unchanged."""
     db = Database(db_path=":memory:", seed_defaults=True)
     result = db.delete_class(9999)
-    assert result is True
+    assert result is False
     assert len(db.get_all_classes()) == 2
+    db.close()
+
+
+def test_add_student_rejects_stupidly_long_name():
+    """Rejects student names beyond the configured maximum length."""
+    db = Database(db_path=":memory:", seed_defaults=False)
+    long_name = "A" * 81
+    student = db.add_student(long_name, "Doe", "john.doe@example.com", "2000-01-01")
+    assert student is None
+    assert db.get_all_students() == []
+    db.close()
+
+
+def test_add_student_accepts_unicode_and_numeric_name_content():
+    """Accepts Unicode and numeric characters in names while still validating boundaries."""
+    db = Database(db_path=":memory:", seed_defaults=False)
+    student = db.add_student(
+        "X AE A-12",
+        "Mu\N{LATIN SMALL LETTER E WITH ACUTE}ller9",
+        "x.ae@example.com",
+        "2000-01-01",
+    )
+    assert student is not None
+    assert student.first_name == "X AE A-12"
+    assert student.last_name == "Mu\N{LATIN SMALL LETTER E WITH ACUTE}ller9"
+    db.close()
+
+
+def test_add_student_rejects_future_date_of_birth():
+    """Rejects dates of birth in the future."""
+    db = Database(db_path=":memory:", seed_defaults=False)
+    student = db.add_student("John", "Doe", "john.doe@example.com", "2999-01-01")
+    assert student is None
+    db.close()
+
+
+def test_add_teacher_email_is_case_normalized_for_uniqueness():
+    """Treats mixed-case duplicate emails as the same logical email."""
+    db = Database(db_path=":memory:", seed_defaults=False)
+    teacher = db.add_teacher("Jane", "Doe", "Jane.Doe@Example.COM")
+    duplicate = db.add_teacher("Janet", "Doe", "jane.doe@example.com")
+    assert teacher is not None
+    assert teacher.email == "jane.doe@example.com"
+    assert duplicate is None
+    db.close()
+
+
+def test_add_class_rejects_stupidly_long_name():
+    """Rejects class names beyond the configured maximum length."""
+    db = Database(db_path=":memory:", seed_defaults=True)
+    long_name = "C" * 121
+    cls = db.add_class(long_name, 1)
+    assert cls is None
+    db.close()
+
+
+def test_set_students_for_class_rejects_invalid_student_ids():
+    """Rejects class enrollment updates containing non-positive IDs."""
+    db = Database(db_path=":memory:", seed_defaults=True)
+    success = db.set_students_for_class(1, [1, 0, 2])
+    assert success is False
+    db.close()
+
+
+def test_delete_student_rejects_invalid_id_boundary():
+    """Rejects boundary-invalid IDs (zero or negative)."""
+    db = Database(db_path=":memory:", seed_defaults=True)
+    assert db.delete_student(0) is False
+    assert db.delete_student(-1) is False
     db.close()
 
 
@@ -288,6 +365,23 @@ def test_set_grade_fails_when_student_not_enrolled():
     success, grade = db.set_grade_for_student_in_class(1, cls.id, GradeEnum.A)
     assert success is False
     assert grade is None
+    db.close()
+
+
+def test_set_grade_with_reason_fails_when_student_not_enrolled():
+    """Returns a specific reason when assigning a grade to a non-enrolled student."""
+    db = Database(db_path=":memory:", seed_defaults=True)
+    cls = db.add_class("History 101", 1)
+    assert cls is not None
+
+    success, grade, reason = db.set_grade_for_student_in_class_with_reason(
+        1, cls.id, GradeEnum.A
+    )
+
+    assert success is False
+    assert grade is None
+    assert reason == "This student is not enrolled in this class."
+    assert db.get_grade_for_student_in_class(1, cls.id) is None
     db.close()
 
 

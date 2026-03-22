@@ -1,5 +1,6 @@
 from tkinter import ttk
 from Utils.Dataclasses import Class, GradeEnum
+from Utils.Validation import ValidationError, validate_class_name
 import tkinter as tk
 import customtkinter as ctk
 import sys
@@ -33,6 +34,18 @@ class Classes(ctk.CTkFrame):
     def show_frame(self, name: str):
         """Brings the specified frame to the front, making it visible to the user."""
         self.frames[name].lift()
+
+    def _resolve_teacher_id_from_name(self, teacher_name: str) -> int | None:
+        """Maps combobox teacher text back to teacher_id; empty text means unassigned."""
+        normalized_name = teacher_name.strip()
+        if not normalized_name:
+            return None
+
+        for teacher in self.controller.teacher_vm.teachers:
+            if teacher.name() == normalized_name:
+                return teacher.id
+
+        raise ValidationError("Selected teacher is invalid.")
 
     def _build_list_frame(self, frame: ctk.CTkFrame):
         """Builds the list frame, which shows the list of classes in a treeview, and has buttons for adding a new class, editing a selected class, and deleting a selected class."""
@@ -72,6 +85,9 @@ class Classes(ctk.CTkFrame):
         # Darwin (macOS) uses Button-2 for right-click, while Windows (and hopefully Linux) use Button-3
         if sys.platform == "darwin":
             self.class_listbox.bind("<Button-2>", show_context_menu)
+            self.class_listbox.bind(
+                "<Control-Button-1>", show_context_menu
+            )  # also bind ctrl+click for right-click on macOS
         else:
             self.class_listbox.bind("<Button-3>", show_context_menu)
 
@@ -327,20 +343,15 @@ class Classes(ctk.CTkFrame):
 
     def _save_class(self):
         """Saves the new class to the database with the details entered in the add frame, and refreshes the list to show the new class."""
-        name = self.add_name_entry.get().strip()
-        teacher_id = self.add_teacher_combobox.get()
-        if teacher_id:
-            teacher_names = [t.name() for t in self.controller.teacher_vm.teachers]
-            teacher_id = self.controller.teacher_vm.teachers[
-                teacher_names.index(teacher_id)
-            ].id
-        else:
-            print("No teacher selected, setting teacher_id to None")
-            teacher_id = None
-
-        if not name:
-            self.add_error_label.configure(text="Class name cannot be empty.")
+        try:
+            name = validate_class_name(self.add_name_entry.get())
+            teacher_id = self._resolve_teacher_id_from_name(
+                self.add_teacher_combobox.get()
+            )
+        except ValidationError as exc:
+            self.add_error_label.configure(text=str(exc))
             return
+
         cls = self.controller.db.add_class(name, teacher_id)
         if cls:
             selected_ids = [s.id for s in getattr(self, "_add_selected", [])]
@@ -517,24 +528,31 @@ class Classes(ctk.CTkFrame):
         selected = self.class_listbox.selection()
         if not selected:
             return
-        teacher_id = self.edit_teacher_combobox.get()
-        if teacher_id:
-            teacher_names = [
-                teacher.name() for teacher in self.controller.teacher_vm.teachers
-            ]
-            teacher_id = self.controller.teacher_vm.teachers[
-                teacher_names.index(teacher_id)
-            ].id
-        else:
-            teacher_id = None
-        class_id = self.class_listbox.item(selected[0])["values"][0]
-        name = self.edit_name_entry.get().strip()
-        if not name:
-            self.edit_error_label.configure(text="Class name cannot be empty.")
+
+        try:
+            teacher_id = self._resolve_teacher_id_from_name(
+                self.edit_teacher_combobox.get()
+            )
+            name = validate_class_name(self.edit_name_entry.get())
+        except ValidationError as exc:
+            self.edit_error_label.configure(text=str(exc))
             return
-        self.controller.class_vm.update_class(class_id, name, teacher_id)
+
+        class_id = self.class_listbox.item(selected[0])["values"][0]
+        success, _cls = self.controller.db.update_class(class_id, name, teacher_id)
+        if not success:
+            self.edit_error_label.configure(text="Failed to update class.")
+            return
+
         selected_ids = [student.id for student in getattr(self, "_edit_selected", [])]
-        self.controller.db.set_students_for_class(class_id, selected_ids)
+        if not self.controller.db.set_students_for_class(class_id, selected_ids):
+            self.edit_error_label.configure(
+                text="Failed to save enrolled students for this class."
+            )
+            return
+
+        self.edit_error_label.configure(text="")
+        self.controller.class_vm.load_classes()
         self._refresh_list()
         self.show_frame("list")
 
@@ -686,8 +704,11 @@ class Classes(ctk.CTkFrame):
         selected_values = self._detail_student_list.item(selected[0])["values"]
         student_id = selected_values[0]
         grade_value = self._detail_grade_combobox.get()
-        success, _ = self.controller.db.set_grade_for_student_in_class(
-            student_id, self._detail_class_id, grade_value
+
+        success, _, reason = (
+            self.controller.db.set_grade_for_student_in_class_with_reason(
+                student_id, self._detail_class_id, grade_value
+            )
         )
         if success:
             self._refresh_detail_students()
@@ -696,5 +717,6 @@ class Classes(ctk.CTkFrame):
             )
         else:
             self._detail_grade_status.configure(
-                text="Failed to save grade for this student/class.", text_color="red"
+                text=reason or "Failed to save grade for this student/class.",
+                text_color="red",
             )
